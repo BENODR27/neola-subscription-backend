@@ -1,0 +1,12 @@
+node_modules
+.git
+.local
+coverage
+*.log
+*.pem
+*.key
+.env
+.env.*
+test
+tools/preview.cjs
+tools/run-integration.cjs

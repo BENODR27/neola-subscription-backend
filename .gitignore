@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+coverage/
+.env.container
+.env.deploy
+!.env.container.example
+!.env.deploy.example

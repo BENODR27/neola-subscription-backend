@@ -1,0 +1,8 @@
+ALTER TABLE control_users ADD COLUMN email varchar(255), ADD COLUMN email_verified boolean NOT NULL DEFAULT false,
+ ADD COLUMN mfa_secret text, ADD COLUMN mfa_pending text, ADD COLUMN mfa_last_counter bigint, ADD COLUMN recovery_hashes jsonb NOT NULL DEFAULT '[]';
+UPDATE control_users u SET email=c.contact_email FROM control_customers c WHERE u.customer_id=c.id;
+CREATE TABLE control_action_tokens(token_hash char(64) PRIMARY KEY,user_id uuid NOT NULL REFERENCES control_users(id),kind varchar(30) NOT NULL CHECK(kind IN ('verify_email','reset_password')),expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE control_mail_outbox(id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES control_users(id),recipient varchar(255) NOT NULL,kind varchar(30) NOT NULL,encrypted_payload text NOT NULL,status varchar(20) NOT NULL DEFAULT 'queued',created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE control_invoices(id uuid PRIMARY KEY,invoice_number varchar(80) UNIQUE NOT NULL,customer_id uuid NOT NULL REFERENCES control_customers(id),request_id uuid UNIQUE NOT NULL REFERENCES control_requests(id),currency char(3) NOT NULL,amount_minor bigint NOT NULL CHECK(amount_minor>=0),payment_reference varchar(255),customer_snapshot jsonb NOT NULL,plan_snapshot jsonb NOT NULL,issued_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE control_key_rotations(id uuid PRIMARY KEY,instance_id uuid NOT NULL REFERENCES control_instances(id),previous_hash char(64) NOT NULL,new_hash char(64) NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+ALTER TABLE control_instances ADD COLUMN pending_key_hash char(64), ADD COLUMN encrypted_pending_key text;

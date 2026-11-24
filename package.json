@@ -1,0 +1,39 @@
+{
+  "name": "neola-subscription-backend",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:create": "node src/database.js create",
+    "db:migrate": "node src/database.js migrate",
+    "bootstrap:owner": "node src/bootstrap-owner.js",
+    "test": "node --test",
+    "test:integration": "node tools/run-integration.cjs",
+    "test:workflow": "node tools/run-integration.cjs --workflow",
+    "mail:deliver": "node tools/deliver-mail.cjs",
+    "mail:inspect": "node tools/local-mail.cjs",
+    "docker:config": "docker compose --env-file .env.deploy -f compose.independent.yaml config --quiet",
+    "docker:build": "docker compose --env-file .env.deploy -f compose.independent.yaml build",
+    "docker:up": "docker compose --env-file .env.deploy -f compose.independent.yaml up -d --build",
+    "docker:logs": "docker compose --env-file .env.deploy -f compose.independent.yaml logs --tail=100 -f",
+    "docker:migrate": "docker compose --env-file .env.deploy -f compose.independent.yaml --profile maintenance run --rm --build migrate"
+  },
+  "dependencies": {
+    "express": "4.22.3",
+    "pg": "8.23.1",
+    "bcryptjs": "2.4.3",
+    "cookie-parser": "1.4.7",
+    "cors": "2.8.6",
+    "helmet": "8.3.0",
+    "express-rate-limit": "8.7.4",
+    "dotenv": "16.6.1"
+  },
+  "overrides": {
+    "object-inspect": "1.13.4",
+    "ansi-styles": "6.2.3"
+  }
+}

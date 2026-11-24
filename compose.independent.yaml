@@ -17,10 +17,7 @@ services:
       - path: .env.container
         format: raw
     ports:
-      - '${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-5005}:7020'
-    networks:
-      platform:
-        aliases: [control-api]
+      - '${BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-5005}:7020'
   migrate:
     profiles: [maintenance]
     build:
@@ -29,8 +26,3 @@ services:
       - path: .env.container
         format: raw
     command: ['sh', '-ec', 'node src/database.js migrate']
-    networks: [platform]
-networks:
-  platform:
-    external: true
-    name: ${NEOLA_NETWORK:-neola-platform}

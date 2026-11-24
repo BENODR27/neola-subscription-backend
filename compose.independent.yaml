@@ -1,4 +1,4 @@
-# Independently managed service. No databases, seeds or sibling build contexts.
+# Independently managed service. Explicit maintenance jobs; no automatic bootstrap.
 name: neola-subscription-backend
 services:
   control-api:
@@ -26,3 +26,14 @@ services:
       - path: .env.container
         format: raw
     command: ['sh', '-ec', 'node src/database.js migrate']
+  seed:
+    profiles: [maintenance]
+    build:
+      context: .
+    env_file:
+      - path: .env.container
+        format: raw
+      - path: .env.seed
+        format: raw
+        required: false
+    command: ['node', 'src/seed-base.js']

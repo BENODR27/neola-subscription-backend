@@ -27,6 +27,32 @@ No frontend receives database passwords, signing private keys or activation keys
 
 ## Run this repository
 
+### First installation: base Console users
+
+After migrations, copy `seed.env.example` to private `.env.seed` and configure
+the owner username/password. Then:
+
+```sh
+docker compose --env-file .env.deploy -f compose.independent.yaml --profile maintenance run --rm --build seed
+```
+
+Optional npm alias: `npm run docker:seed`. Native CLI: `npm run db:seed:base`.
+For a local test installation, set `CONTROL_SEED_TEST_USERS=true` and configure
+the approver and customer usernames/passwords too. This option is refused in
+production. The pending test customer can request a plan but receives no automatic
+subscription, application entitlement or approval. Production seeds only the
+initial owner; create real customers/staff through normal Console administration.
+
+Repeat runs preserve existing password hashes, roles, IDs, customer membership,
+disabled state and MFA/security settings. A username already assigned another
+role or another existing bootstrap owner is not replaced. Missing credentials
+abort the whole transaction, so no partial account set is created.
+
+Commercial catalog import stays in the existing installation/catalog controls;
+configure it after registering the ERP installation. Seeders do not read IAM's
+database, invent plans or bypass purchase/trial approval. Restored databases need
+migrations, not bootstrap seeds. Keep `.env.seed` private and out of Git.
+
 For provider production deployment:
 
 ```sh

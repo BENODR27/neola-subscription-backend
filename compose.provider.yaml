@@ -1,0 +1,22 @@
+# Provider server only. Never distribute its private signing key to customers.
+services:
+  control-api:
+    environment:
+      NODE_ENV: production
+      CONTROL_REQUIRE_SIGNED_LICENSE: 'true'
+      CONTROL_LICENSE_PRIVATE_KEY_FILE: /run/secrets/provider-license-private.pem
+      CONTROL_REQUIRE_OPERATOR_MFA: 'true'
+      CONTROL_REQUIRE_VERIFIED_EMAIL: 'true'
+      CONTROL_ALLOW_HTTP_ERP: 'false'
+      CONTROL_TRUST_PROXY_HOPS: ${CONTROL_TRUST_PROXY_HOPS:-2}
+    volumes:
+      - type: bind
+        source: ${CONTROL_LICENSE_PRIVATE_KEY_HOST_FILE:?Set the provider PRIVATE key path in .env.deploy}
+        target: /run/secrets/provider-license-private.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]

@@ -1,89 +1,61 @@
-# Subscription API: independent deployment
+# Subscription API deployment
 
-Owns separate console authentication, catalog, plans, requests and approvals. Requires its existing PostgreSQL database. ERP bridge targets must be explicitly permitted with CONTROL_ERP_ALLOWED_ORIGINS. Console sessions do not use the ERP JWT secret.
-
-This package builds from this directory only. No parent workspace, sibling source
-checkout or root launcher is required. Network API dependencies remain explicit.
+Host: **Provider server**. This repository builds independently; no shared external
+Docker network is required. All services bind to `0.0.0.0` by default. Calls to
+other services use their actual IP and published port, never `0.0.0.0`.
 
 ## Configure once
 
-Requires Docker with Compose 2.30+; Node/npm is only needed to use the npm aliases.
-On a Mac/Ubuntu shell, copy templates without replacing any existing configuration:
-
-```sh
-[ -f .env.container ] || cp .env.container.example .env.container
-[ -f .env.deploy ] || cp .env.deploy.example .env.deploy
-```
-
-Edit both files before starting. Runtime values belong in `.env.container`;
-port, bind address and image belong in `.env.deploy`. Use literal
-unquoted values in `.env.container`. Existing passwords, keys and instance IDs
-must be copied unchanged from the existing installation, not regenerated.
-Relevant runtime settings (placeholders must be replaced):
+For a new configuration, copy `provider.env.example` to `.env.container` and
+`.env.deploy.example` to `.env.deploy` without replacing existing files.
+Fill the existing secrets and replace these destination placeholders:
 
 ```dotenv
-DB_HOST=192.168.1.50
+DB_HOST=PROVIDER_DATABASE_IP
 DB_PORT=5432
 CONTROL_DB_NAME=neola_subscriptions
-DB_USER=<existing-user>
-DB_PASSWORD=<existing-password>
-CONTROL_ENCRYPTION_KEY=<existing-console-encryption-key>
-CONTROL_PORTAL_URL=http://192.168.1.50:5006
-CONTROL_ALLOWED_ORIGINS=http://192.168.1.50:5006
+CONTROL_PORTAL_URL=https://PROVIDER_IP:5443
+CONTROL_ALLOWED_ORIGINS=https://PROVIDER_IP:5443
+CONTROL_ERP_ALLOWED_ORIGINS=https://CUSTOMER_IP:5443
 ```
 
-Preserve all customized settings including JWT issuer/audience, subscription mode,
-provider origins and signing configuration. Keep provider signing private keys only
-on the provider server. These generic local manifests do not replace the signed
-customer-policy Ubuntu release profiles.
+Preserve database credentials, JWT issuer/audience, password hashes, instance ID/key
+and the Console encryption key when restoring existing data. IAM, MMMS and storage
+share the customer's JWT signing secret. Console logins are independent.
+Set `STORAGE_VOLUME` in storage's deployment settings to its restored upload volume.
+No frontend receives database passwords, signing private keys or activation keys.
 
-No shared Docker network setup is needed. Each package gets its own automatic
-Compose network and calls other packages through the host LAN IP and published
-ports 5001–5006. Replace every 192.168.1.50 in the runtime template with your
-actual host IP, including browser origins and database settings. On a Mac,
-`ipconfig getifaddr en0` usually shows the Wi-Fi IP; use Network settings if
-that interface is not active.
+## Run this repository
 
-Databases must already be reachable at the configured IP and DB_PORT. A database
-container reachable only on an old private Docker network must first be made
-reachable through a deliberately configured host endpoint; preserve its data and
-credentials. This manifest does not create databases or change their ports.
-
-## Start this package only
+For provider production deployment:
 
 ```sh
-docker compose --env-file .env.deploy -f compose.independent.yaml config --quiet
-docker compose --env-file .env.deploy -f compose.independent.yaml up -d --build
-docker compose --env-file .env.deploy -f compose.independent.yaml ps
-docker compose --env-file .env.deploy -f compose.independent.yaml logs --tail=100
+docker compose --env-file .env.deploy -f compose.independent.yaml -f compose.provider.yaml up -d --build
 ```
 
-Equivalent aliases: `npm run docker:config`, `npm run docker:up`,
-`npm run docker:logs`. `npm run docker:build` builds without starting containers.
-Local endpoint (also reachable using your host IP): http://localhost:5005. `HTTP_PORT` changes this without
-changing the container's internal port. `BIND_ADDRESS=0.0.0.0` permits LAN access;
-restrict API ports to trusted clients and use HTTPS for production frontends.
+Optional npm alias: `npm run docker:provider`. The provider profile enforces
+production security; do not use the local runtime profile for a sold installation.
 
-After changing environment values, rerun `docker:up` to recreate this service.
-Frontend upstream changes take effect at container startup without an Angular rebuild.
+Set `CONTROL_LICENSE_PRIVATE_KEY_HOST_FILE` in `.env.deploy` to the existing
+provider signing private key. Keep it only on your provider server. The provider
+profile requires signatures, verified operator emails and MFA. Its default two
+trusted proxy hops assume a controlled HTTPS gateway plus the Console Nginx.
 
-## Migrate an existing database
+Put the provider frontend behind an HTTPS gateway for production. Port 5443 above
+is an example external HTTPS port, not a new automatically started proxy. An
+IP-based HTTPS endpoint needs a trusted TLS certificate valid for that IP. Existing
+platform release documentation includes the gateway setup. Browser origins and
+public links must match the real external HTTPS IP:port. Gateways forward to the
+frontend HTTP port (ERP 5001, Console 5006). Restrict direct API/database ports to
+trusted callers with the firewall.
 
-Back up first, coordinate a maintenance window, then run:
+Database migrations are explicit: run `npm run docker:migrate` during a maintenance
+window before upgraded APIs. It never bootstraps accounts or resets passwords.
 
-```sh
-npm run docker:migrate
-```
-
-This explicit job runs only versioned migrations. It does not create databases,
-bootstrap accounts, seed roles or reset passwords. Run before starting upgraded
-APIs. Do not run old and new writers simultaneously against the same database.
-
-Never commit `.env.container`, `.env.deploy`, upload files, database backups or
-private keys. Do not delete volumes to fix configuration failures.
-
-For local Console HTTP testing, use its template's NODE_ENV=development and the
-actual host-IP origin on port 5006. Production requires HTTPS and production
-settings. Preserve existing subscription mode, JWT/encryption secrets and
-installation credentials. Do not use local profiles instead of signed customer
-release profiles.
+For local testing only, the base `compose.independent.yaml` and `.env.container.example`
+remain available. The separate common-db test repository uses port 5433 and volume
+`neola-test-pgdata`; set test API DB_HOST to its server IP and DB_PORT=5433. Keep
+production customer/provider databases and credentials isolated. Databases and
+uploads must already be restored; environment files do not migrate data. Never
+commit real `.env` files or keys, delete volumes, or run account bootstrap on a
+restored database.
